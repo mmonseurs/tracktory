@@ -1,1 +1,1 @@
-deps: minimist, fs, path, sharp
+deps: minimist, path, sharp
