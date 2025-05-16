@@ -1,1 +1,1 @@
-deps: minimist, fs, path, sharp, glob
+deps: minimist, fs, path, sharp
