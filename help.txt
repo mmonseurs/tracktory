@@ -1,0 +1,34 @@
+flactory (https://github.com/mmonseurs/flactory)
+------------------------------------------------
+
+Usage:
+  node flactory.js [options]
+
+Options:
+  --dir=<path>             Directory containing audio files (default: current directory)
+  --filetype=<ext>         Audio file extension: 'flac' or 'mp3' (default: 'flac')
+  --coverart               Embed cover art (must be 'cover.jpg') into audio files
+  --smallcoverart          Embed a resized 500x500 version (keeps original cover file)
+  --lyrics                 Attempt to fetch and embed lyrics into audio files
+  --preferlocal            Prefer local files (cover.jpg, lyrics.lrc) over online sources
+  --help, -h               Show this help message and exit
+
+Examples:
+  node flactory.js --filetype=mp3 --coverart --lyrics
+    ▶ Process MP3 files in the current directory, embed cover art and lyrics
+
+  node flactory.js --dir=./albums --filetype=flac --coverart
+    ▶ Embed coverart into FLAC files from './albums' only
+
+Notes:
+  • You must have required dependencies installed.
+  • Optional tools like 'eyeD3' or 'metaflac' are only required when working with that filetype.
+  • Cover art should be placed as 'cover.jpg' in the target directory.
+  • Lyrics are either pulled from local .lrc/.txt files or fetched online.
+
+Machines:
+  • Covers (sharp) — resizes and optimizes album art
+  • Inputs (minimist) — parses command-line flags
+  • Metadata (ffmpeg/probe) — reads and writes audio metadata
+  • MP3 Engine (eyeD3) — required for MP3 processing only
+  • FLAC Engine (metaflac) — required for FLAC processing only
