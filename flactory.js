@@ -4,12 +4,12 @@ const path = require('path');
 const { execSync } = require('child_process');
 const colors = require('./colors');
 
-process.argv.forEach(function (val, index, array) {
-  if (val === '-h' || val === '--help' ||  process.argv.length === 2) {
+process.argv.forEach(argument => {
+  if (argument === '-h' || argument === '--help' ||  process.argv.length === 2) {
     console.log(fs.readFileSync('./help.txt', 'utf8'));
     process.exit(0);
   }
-}
+});
 
 // 1: Immediately check/load minimist to figure out
 //    which dependencies are actually required
