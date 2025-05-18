@@ -9,12 +9,12 @@ process.argv.forEach(function (val, index, array) {
     console.log(fs.readFileSync('./help.txt', 'utf8'));
     process.exit(0);
   }
-});
+}
 
 // 1: Immediately check/load minimist to figure out
 //    which dependencies are actually required
-console.log("Welcome to the flactory!");
-console.log("Booting up machines...");
+console.log('Welcome to the flactory!');
+console.log('Booting up machines...');
 let argv;
 try {
   argv = require('minimist')(process.argv.slice(2), {
@@ -45,27 +45,27 @@ try {
 argv.filetype = argv.filetype.toLowerCase();
 const dependencyMap = [
   {
-    package: "minimist", type: "node", name: "Inputs (minimist)",
+    package: 'minimist', type: 'node', name: 'Inputs (minimist)',
     required: true
   },
   {
-    package: "sharp", type: "node", name: "Covers (sharp)",
+    package: 'sharp', type: 'node', name: 'Covers (sharp)',
     required: true
   },
   {
-    package: "axios", type: "node", name: "Web (axios)",
+    package: 'axios', type: 'node', name: 'Web (axios)',
     required: true
   },
   { 
-    package: "ffmpeg", type: "sys", name: "Metadata (ffmpeg/probe)", 
+    package: 'ffmpeg', type: 'sys', name: 'Metadata (ffmpeg/probe)', 
     required: true 
   },
   { 
-    package: "metaflac", type: "sys", name: "FLAC (metaflac)", 
+    package: 'metaflac', type: 'sys', name: 'FLAC (metaflac)', 
     required: argv => argv.filetype === 'flac' 
   },
   { 
-    package: "eyeD3", type: "sys", name: "MP3 (eyeD3)", 
+    package: 'eyeD3', type: 'sys', name: 'MP3 (eyeD3)', 
     required: argv => argv.filetype === 'mp3'
   },
 ];
@@ -232,7 +232,7 @@ async function fetchLyrics(dir) {
     const metadata = {};
     const ffprobe = `ffprobe -v quiet -show_entries `
                   + `format_tags=artist,album,title,track `
-                  + `-of default=noprint_wrappers=1 "${file.name}"`;
+                  + `-of default=noprint_wrappers=1 '${file.name}'`;
     const output = execSync(ffprobe, { encoding: 'utf8', cwd: dir });
     //Example output:
     //TAG:ARTIST=Bastille
@@ -240,7 +240,7 @@ async function fetchLyrics(dir) {
     //TAG:TITLE=Intros & Narrators
 
     output.split('\n').forEach(line => {
-      const trimmedLine = line.slice(4); //trim "TAG:"
+      const trimmedLine = line.slice(4); //trim 'TAG:'
       const seperatorIndex = trimmedLine.indexOf('=');
 
       const property = trimmedLine.slice(0, seperatorIndex);
@@ -289,7 +289,7 @@ async function fetchLyrics(dir) {
   // if (argv.embed) {
   //   try {
   //     execSync(
-  //       `python lrcput.py -d "${dir}" -r`,
+  //       `python lrcput.py -d '${dir}' -r`,
   //       { stdio: 'ignore' }
   //     );
   //   } catch (error) {
@@ -353,17 +353,17 @@ function checkDeps(argv) {
 
 
 function checkDependency(machine) {
-  const osShell = os.platform() === "win32" ? "cmd.exe" : "/bin/bash";
-  const checkCmd = os.platform() === "win32" ? "where" : "command -v";
+  const osShell = os.platform() === 'win32' ? 'cmd.exe' : '/bin/bash';
+  const checkCmd = os.platform() === 'win32' ? 'where' : 'command -v';
   try {
     switch(machine.type) {
-      case "node":
+      case 'node':
         require(machine.package);
         break;
-      case "sys":
+      case 'sys':
         execSync(
           `${checkCmd} ${machine.package}`,
-          { stdio: "ignore", shell: osShell }
+          { stdio: 'ignore', shell: osShell }
         );
         break;
     }
