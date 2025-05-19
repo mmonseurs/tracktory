@@ -1,11 +1,28 @@
 #!/usr/bin/env node
 
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+//                                                                           //
+//                                                                           //
+//  GENERAL DEFINITIONS & DEPENDENCIES                                       //
+//                                                                           //
+//                                                                           //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
+
+// Built-in dependencies
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const colors = require(__dirname + '/colors');
 
+// Lower chances of being flagged as a bot
+const headers = {
+  'User-Agent': 'flactory (https://github.com/mmonseurs/flactory)'
+};
+
+// Handling the help flag
 process.argv.forEach(argument => {
   if (argument === '-h' || argument === '--help' ||  process.argv.length === 2) {
     console.log(fs.readFileSync(__dirname + '/help.txt', 'utf8'));
@@ -13,8 +30,7 @@ process.argv.forEach(argument => {
   }
 });
 
-// 1: Immediately check/load minimist to figure out
-//    which dependencies are actually required
+// Try loading minimist to figure out which dependencies are actually required
 console.log('Welcome to the flactory!');
 console.log('Booting up machines...');
 let argv;
@@ -44,109 +60,98 @@ try {
   process.exit(1);
 }
 
-// 2: Now run full dependency check
+// Now run full dependency check
 argv.filetype = argv.filetype.toLowerCase();
 const dependencyMap = [
-  {
-    package: 'minimist', type: 'node', name: 'Inputs (minimist)',
-    required: true
-  },
-  {
-    package: 'sharp', type: 'node', name: 'Covers (sharp)',
-    required: true
-  },
-  {
-    package: 'axios', type: 'node', name: 'Web (axios)',
-    required: true
-  },
-  {
-    package: 'readline', type: 'node', name: 'Progress (readline)',
-    required: true
-  },
-  { 
-    package: 'ffmpeg', type: 'sys', name: 'Metadata (ffmpeg/probe)', 
-    required: true 
-  },
-  { 
-    package: 'metaflac', type: 'sys', name: 'FLAC (metaflac)', 
-    required: argv => argv.filetype === 'flac' 
-  },
-  { 
-    package: 'eyeD3', type: 'sys', name: 'MP3 (eyeD3)', 
-    required: argv => argv.filetype === 'mp3'
-  },
+  { package: 'minimist', type: 'node', name: 'Inputs (minimist)', required: true },
+  { package: 'sharp', type: 'node', name: 'Covers (sharp)', required: true },
+  { package: 'axios', type: 'node', name: 'Web (axios)', required: true },
+  { package: 'readline', type: 'node', name: 'Progress (readline)', required: true },
+  { package: 'ffmpeg', type: 'sys', name: 'Metadata (ffmpeg/probe)', required: true },
+  { package: 'metaflac', type: 'sys', name: 'FLAC (metaflac)', required: argv => argv.filetype === 'flac' },
+  { package: 'eyeD3', type: 'sys', name: 'MP3 (eyeD3)', required: argv => argv.filetype === 'mp3' },
 ];
 checkDeps(argv);
+
+// Rest of the required dependencies
 const sharp = require('sharp');
 const axios = require('axios');
 const readline = require('readline');
 
-// 3: Proceed...
-const headers = { //To lower chance of getting banned as a bot
-  'User-Agent': 'flactory (https://github.com/mmonseurs/flactory)'
-};
-
-const somethingToDo = (
-  argv.coverart || 
-  argv.lyrics || 
-  argv.convert
-);
+// General procedure-wide variables
 let albumArray = [];
+let fileArray = [];
 let albumCount = 0;
 let coversWritten = 0;
-let lyricsFound = 0;
-let filesConverted = 0;
 
+let lyricsFound = 0;
+let lyricsSearched = 0;
+
+let conversionsDone = 0;
+let conversionsAttempted = 0;
+
+// Save errors/warning for after
 let errorArray = [];
 let warningArray = [];
 let infoArray = [];
 
-let previousStatusHadBar  = false;
+// Fancy progress bar variable
+let previousStatusHadBar = false;
 
+// Finally start
 main();
 
 
 
 
 
-// ----------------------------------------------------------------------------
-// Description: You know
-// ----------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+//                                                                           //
+//                                                                           //
+//  ACTUAL FUNCTIONALITY                                                     //
+//                                                                           //
+//                                                                           //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
 async function main() {
   getAlbums(argv.dir);
 
-  if (!somethingToDo) {
+  if (!argv.coverart && !argv.lyrics && !argv.convert) {
     console.log('Please provide an operation to perform');
     process.exit(0);
   }
 
-  logStatus();
-  for (const album of albumArray) {
-    albumCount++;
-    logStatus();
-
+  if (argv.convert || argv.lyrics) for (const file of fileArray) {
     if (argv.convert) {
-      await convertToMp3(album);
+      await convertToMp3(file);
+      logStatus();
     }
-
-    if (argv.coverart) {
-      await embedCover(album, argv.resize);
-    }
-
     if (argv.lyrics) {
-      await fetchLyrics(album);
+      await fetchLyrics(file);
+      logStatus();
     }
-
   }
-  if (albumCount === 0 ) {
-    process.stdout.write('\nWell that was quick :)\n');
+  if (argv.coverart) for (const album of albumArray) {
+    await embedCover(album);
+    logStatus();
   }
 
-  process.stdout.write(`\nFinished with ${errorArray.length} error(s), ${warningArray.length} warning(s) and ${infoArray.length} information(s).\n`);
+  if (fileArray.length === 0 ) {
+    process.stdout.write('\nWell that was quick! No audio files found...\n');
+  }
+  // Final summary
+  process.stdout.write(
+    `\nFinished with ${errorArray.length} error(s), `
+    + `${warningArray.length} warning(s) `
+    + `and ${infoArray.length} information(s).\n`
+  );
 
+  // Write errors/warnings to logfile
   const loggingCreated = errorArray.length + warningArray.length + infoArray.length > 0;
   if (loggingCreated) {
-    const logFile = fs.createWriteStream(__dirname + '/flactory_log.txt');
+    const logFilePath = __dirname + '/flactory_log.txt';
+    const logFile = fs.createWriteStream(logFilePath);
     errorArray.forEach(error => logFile.write('[ERROR]' + error + '\n'));
 
     if (errorArray.length) logFile.write('\n');
@@ -156,7 +161,7 @@ async function main() {
     infoArray.forEach(infoLine => logFile.write('[INFO]' + infoLine + '\n' ));
 
     logFile.end;
-    process.stdout.write('Check flactory_log.txt for more details.\n');
+    process.stdout.write(`Check ${logFilePath} for more details.\n`);
   }
 
 }
@@ -166,43 +171,14 @@ async function main() {
 // ----------------------------------------------------------------------------
 // Description: Keep logging up-to-date
 // ----------------------------------------------------------------------------
-function logStatus(progress) {
-  const showProgressBar = typeof progress === 'number' && !isNaN(progress);
-
-  // If the last draw had a bar, move cursor up to overwrite both lines
-  if (previousStatusHadBar) {
-    readline.moveCursor(process.stdout, 0, -2);
-  } else {
-    readline.moveCursor(process.stdout, 0, -1);
-  }
-
-  // First line: status summary
-  const statusLine = `Albums found: ${albumCount}` +
-    (argv.coverart ? ` | Covers embedded: ${coversWritten}` : '') +
-    (argv.convert ? ` | Files converted: ${filesConverted}` : '') +
-    (argv.lyrics ? ` | Lyrics found: ${lyricsFound}` : '');
-
-  readline.clearLine(process.stdout, 0);
-  readline.cursorTo(process.stdout, 0);
-  process.stdout.write(statusLine + '\n');
-
-  // Second line: optional progress bar
-  if (showProgressBar) {
-    const barWidth = 40;
-    const filledBarLength = Math.round(progress * barWidth);
-    const bar = `[${'='.repeat(filledBarLength)}${' '.repeat(barWidth - filledBarLength)}]`;
-    const percent = Math.round(progress * 100);
-
-    readline.clearLine(process.stdout, 0);
-    readline.cursorTo(process.stdout, 0);
-    process.stdout.write(`${bar} ${percent}%\n`);
-
-    previousStatusHadBar = true;
-  } else {
-    readline.clearLine(process.stdout, 0);
-    previousStatusHadBar = false;
-  }
+function logStatus() {
+  const statusLine = `Albums found: ${albumArray.length}` +
+    (argv.coverart ? ` | Covers embedded: ${coversWritten}/${albumArray.length}` : '') +
+    (argv.convert ? ` | Files converted: ${conversionsDone}/${conversionsAttempted}` : '') +
+    (argv.lyrics ? ` | Lyrics found: ${lyricsFound}/${lyricsSearched}` : '');
+  process.stdout.write('\r' + statusLine);
 }
+
 
 
 // ----------------------------------------------------------------------------
@@ -211,16 +187,22 @@ function logStatus(progress) {
 function getAlbums(baseDir) {
   const dirents = fs.readdirSync(baseDir, { withFileTypes: true });
   const files = dirents.filter(dirent => dirent.isFile());
+  const audioFiles = files.filter(file => isAudioFile(file));
   const subdirs = dirents.filter(dirent => dirent.isDirectory());
 
-  if (files.some(isAudioFile)) {
-    albumArray.push(baseDir);
-  }
+  let isAlbum = false;
   
+  for (const file of audioFiles) {
+    fileArray.push(file);
+    isAlbum = true;
+  }
+  if (isAlbum) albumArray.push(baseDir);
+
   subdirs.forEach(dir => {
     getAlbums(path.join(baseDir, dir.name));
   })
 }
+
 
 
 // ----------------------------------------------------------------------------
@@ -230,35 +212,32 @@ function isAudioFile(fileEntity) {
   return fileEntity.name.toLowerCase().endsWith(`.${argv.filetype}`);
 }
 
+
+
 // ----------------------------------------------------------------------------
 // Description: Convert files in current directory to mp3
 // ----------------------------------------------------------------------------
-function convertToMp3(albumDir) {
-  const dirents = fs.readdirSync(albumDir, { withFileTypes: true });
-  const files = dirents.filter(dirent => dirent.isFile());
-  const audioFiles = files.filter(file => isAudioFile(file));
+async function convertToMp3(file) {
+  const strippedFileName = path.parse(file.name).name;
+  const mp3File = `${file.parentPath}/${strippedFileName}.mp3`;
+  if (fs.existsSync(mp3File)) return;
 
   const ffmpegOptions = '-ab 320k -map_metadata 0 -id3v2_version 3';
-
-  for (const file of audioFiles) {
-    const strippedFileName = path.parse(file.name).name;
-    const mp3File = `${file.parentPath}/${strippedFileName}.mp3`;
-    const ffmpegCmd = `ffmpeg -i "${file.name}" ${ffmpegOptions} "${mp3File}"`;
-    try {
-      execSync(ffmpegCmd, { cwd: albumDir, stdio: 'ignore' });
-      filesConverted++;
-      logStatus(filesConverted / audioFiles.length);
-    } catch (error) {
-       errorArray.push(`Error converting to MP3 in ${albumDir}: ${error}`);
-    }
+  const ffmpegCmd = `ffmpeg -i "${file.name}" ${ffmpegOptions} "${mp3File}"`;
+  try {
+    execSync(ffmpegCmd, { cwd: albumDir, stdio: 'ignore' });
+    conversionsDone++;
+  } catch (error) {
+      errorArray.push(`Error converting to MP3 in ${albumDir}: ${error}`);
   }
 }
+
 
 
 // ----------------------------------------------------------------------------
 // Description: Resize coverart if necessary, then embed in files
 // ----------------------------------------------------------------------------
-async function embedCover(albumDir, makeSmaller) {
+async function embedCover(albumDir) {
   const albumCover = findCoverImage(albumDir);
   const finalAlbumCover = path.join(albumDir, 'cover_final.jpg');
 
@@ -270,7 +249,7 @@ async function embedCover(albumDir, makeSmaller) {
 
   // Resize coverart if bigger than 500x500
   const metadata = await sharp(albumCover).metadata();
-  if (makeSmaller && (metadata.width > 500 || metadata.height > 500)) {
+  if (argv.resize && (metadata.width > 500 || metadata.height > 500)) {
     try {
       await sharp(albumCover)
           .resize({ width: 500, height: 500, fit: 'inside' })
@@ -316,6 +295,10 @@ async function embedCover(albumDir, makeSmaller) {
 }
 
 
+
+// ----------------------------------------------------------------------------
+// Description: Find out what the coverart is called (if there is any)
+// ----------------------------------------------------------------------------
 function findCoverImage(albumDir) {
   const files = fs.readdirSync(albumDir);
   const fileNames = ['cover', 'coverart', 'albumcover', 'album'];
@@ -333,68 +316,71 @@ function findCoverImage(albumDir) {
 }
 
 
+
 // ----------------------------------------------------------------------------
 // Description: Get lyrics for all songs in the album directory
 // ----------------------------------------------------------------------------
-async function fetchLyrics(albumDir) {
-  const dirents = fs.readdirSync(albumDir, { withFileTypes: true });
-  const files = dirents.filter(dirent => dirent.isFile());
-  const audioFiles = files.filter(file => isAudioFile(file));
+async function fetchLyrics(file) {
+  const fullPath = path.join(file.parentPath, file.name);
+  const metadata = {};
+  const ffprobe = `ffprobe -v quiet -show_entries `
+                + `format_tags=artist,album,title,track `
+                + `-of default=noprint_wrappers=1 "${fullPath}"`;
+  const output = execSync(ffprobe, { encoding: 'utf8' });
+  //Example output:
+  //TAG:ARTIST=Bastille
+  //TAG:ALBUM=&
+  //TAG:TITLE=Intros & Narrators
 
-  for (const file of audioFiles) {
-    const metadata = {};
-    const ffprobe = `ffprobe -v quiet -show_entries `
-                  + `format_tags=artist,album,title,track `
-                  + `-of default=noprint_wrappers=1 "${file.name}"`;
-    const output = execSync(ffprobe, { encoding: 'utf8', cwd: albumDir });
-    //Example output:
-    //TAG:ARTIST=Bastille
-    //TAG:ALBUM=&
-    //TAG:TITLE=Intros & Narrators
+  output.split('\n').forEach(line => {
+    const trimmedLine = line.slice(4); //trim 'TAG:'
+    const seperatorIndex = trimmedLine.indexOf('=');
 
-    output.split('\n').forEach(line => {
-      const trimmedLine = line.slice(4); //trim 'TAG:'
-      const seperatorIndex = trimmedLine.indexOf('=');
+    const property = trimmedLine.slice(0, seperatorIndex);
+    const value = trimmedLine.slice(seperatorIndex + 1);
+    metadata[`${property.toLowerCase()}`] = value;
+  });
 
-      const property = trimmedLine.slice(0, seperatorIndex);
-      const value = trimmedLine.slice(seperatorIndex + 1);
-      metadata[`${property.toLowerCase()}`] = value;
-    });
+  if (!metadata.artist || !metadata.title) {
+    warningArray.push(`Missing metadata for ${file.name}. Skipped lyrics.`);
+    return; //next file
+  }
 
-    if (!metadata.artist || !metadata.title) {
-      warningArray.push(`Missing metadata for ${file.name}. Skipped lyrics.`);
-      continue; //next file
+  const strippedFileName = path.parse(file.name).name;
+  const lyricsFile = `${file.parentPath}/${strippedFileName}.lrc`;
+  if (fs.existsSync(lyricsFile) && argv.preferlocal) {
+    return; //next file
+  }
+
+  let foundIt = false;
+  const response = await callLyricsAPI(metadata);
+  lyricsSearched++;
+
+  if (response) {
+    if (response.instrumental) {
+      infoArray.push(`${metadata.artist} - ${metadata.title} is instrumental.`)
+      lyricsFound++;
+      return; //next file
     }
-
-    const strippedFileName = path.parse(file.name).name;
-    const lyricsFile = `${file.parentPath}/${strippedFileName}.lrc`;
-    if (fs.existsSync(lyricsFile) && argv.preferlocal) {
-      continue; //next file
-    }
-
-    let foundIt = false;
-    const response = await callLyricsAPI(metadata);
-    if (response) {
-      if (response.instrumental) {
-        continue; //next file
+    const lyrics = response.syncedLyrics || response.plainLyrics;
+    if (lyrics) {
+      foundIt = true;
+      lyricsFound++;
+      if (argv.preferlocal) {
+        infoArray.push(`${metadata.artist} - ${metadata.title} already has lyrics.`)
+        return;
       }
-      const lyrics = response.syncedLyrics || response.plainLyrics;
-      if (lyrics) {
-        if (fs.existsSync(lyricsFile)) fs.unlinkSync(lyricsFile);
-        fs.writeFileSync(lyricsFile, lyrics, 'utf8');
-        foundIt = true;
-        lyricsFound++;
-        continue; //next file
-      }
+      if (fs.existsSync(lyricsFile)) fs.unlinkSync(lyricsFile);
+      fs.writeFileSync(lyricsFile, lyrics, 'utf8');
+      return; //next file
     }
+  }
 
-    if (!foundIt) {
-      warningArray.push(`Lyrics not found for '${metadata.title}' in ${albumDir}.`)
-    }
-
-    logStatus();
-  } //End of loop
+  if (!foundIt) {
+    warningArray.push(`Lyrics not found for ${metadata.artist} - ${metadata.title}.`)
+  }
 }
+
 
 
 // ----------------------------------------------------------------------------
@@ -402,9 +388,9 @@ async function fetchLyrics(albumDir) {
 // ----------------------------------------------------------------------------
 async function callLyricsAPI(metadata) {
     const apiUrl = `https://lrclib.net/api/get?`
-                + `artist_name=${encodeURIComponent(metadata.artist)}&`
-                + `track_name=${encodeURIComponent(metadata.title)}&`
-                + `album_name=${encodeURIComponent(metadata.album)}`;
+        + `artist_name=${encodeURIComponent(metadata.artist)}&`
+        + `track_name=${encodeURIComponent(metadata.title)}&`
+        + `album_name=${encodeURIComponent(metadata.album)}`;
     try {
       const response = await axios.get(apiUrl, { headers });
       return response.data;
