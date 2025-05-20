@@ -15,11 +15,40 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const colors = require(__dirname + '/colors');
+
+const colors = {
+  reset: "\x1b[0m",
+  bright: "\x1b[1m",
+  dim: "\x1b[2m",
+  underscore: "\x1b[4m",
+  blink: "\x1b[5m",
+  reverse: "\x1b[7m",
+  hidden: "\x1b[8m",
+
+  black: "\x1b[30m",
+  red: "\x1b[31m",
+  green: "\x1b[32m",
+  yellow: "\x1b[33m",
+  blue: "\x1b[34m",
+  magenta: "\x1b[35m",
+  cyan: "\x1b[36m",
+  white: "\x1b[37m",
+  gray: "\x1b[90m",
+
+  bgBlack: "\x1b[40m",
+  bgRed: "\x1b[41m",
+  bgGreen: "\x1b[42m",
+  bgYellow: "\x1b[43m",
+  bgBlue: "\x1b[44m",
+  bgMagenta: "\x1b[45m",
+  bgCyan: "\x1b[46m",
+  bgWhite: "\x1b[47m",
+  bgGray: "\x1b[100m",
+};
 
 // Lower chances of being flagged as a bot
 const headers = {
-  'User-Agent': 'flactory (https://github.com/mmonseurs/flactory)'
+  'User-Agent': 'tracktory (https://github.com/mmonseurs/tracktory)'
 };
 
 // Handling the help flag
@@ -31,7 +60,7 @@ process.argv.forEach(argument => {
 });
 
 // Try loading minimist to figure out which dependencies are actually required
-console.log('Welcome to the flactory!');
+console.log('Welcome to the tracktory!');
 console.log('Booting up machines...');
 let argv;
 try {
@@ -122,6 +151,7 @@ async function main() {
     process.exit(0);
   }
 
+  logStatus();
   if (argv.convert || argv.lyrics) for (const file of fileArray) {
     if (argv.convert) {
       await convertToMp3(file);
@@ -150,7 +180,7 @@ async function main() {
   // Write errors/warnings to logfile
   const loggingCreated = errorArray.length + warningArray.length + infoArray.length > 0;
   if (loggingCreated) {
-    const logFilePath = __dirname + '/flactory_log.txt';
+    const logFilePath = __dirname + '/tracktory_log.txt';
     const logFile = fs.createWriteStream(logFilePath);
     errorArray.forEach(error => logFile.write('[ERROR]' + error + '\n'));
 
@@ -174,8 +204,8 @@ async function main() {
 function logStatus() {
   const statusLine = `Albums found: ${albumArray.length}` +
     (argv.coverart ? ` | Covers embedded: ${coversWritten}/${albumArray.length}` : '') +
-    (argv.convert ? ` | Files converted: ${conversionsDone}/${conversionsAttempted}` : '') +
-    (argv.lyrics ? ` | Lyrics found: ${lyricsFound}/${lyricsSearched}` : '');
+    (argv.convert ? ` | Files converted: ${conversionsDone}/${fileArray.length}` : '') +
+    (argv.lyrics ? ` | Lyrics found: ${lyricsFound}/${fileArray.length}` : '');
   process.stdout.write('\r' + statusLine);
 }
 
@@ -218,17 +248,20 @@ function isAudioFile(fileEntity) {
 // Description: Convert files in current directory to mp3
 // ----------------------------------------------------------------------------
 async function convertToMp3(file) {
+  const fullFilePath = path.join(file.parentPath, file.name);
   const strippedFileName = path.parse(file.name).name;
   const mp3File = `${file.parentPath}/${strippedFileName}.mp3`;
-  if (fs.existsSync(mp3File)) return;
-
+  if (fs.existsSync(mp3File)) {
+    infoArray.push(`${mp3File} already existst. Skipping.`);
+    return;
+  }
   const ffmpegOptions = '-ab 320k -map_metadata 0 -id3v2_version 3';
-  const ffmpegCmd = `ffmpeg -i "${file.name}" ${ffmpegOptions} "${mp3File}"`;
+  const ffmpegCmd = `ffmpeg -i "${fullFilePath}" ${ffmpegOptions} "${mp3File}"`;
   try {
-    execSync(ffmpegCmd, { cwd: albumDir, stdio: 'ignore' });
+    execSync(ffmpegCmd, { stdio: 'ignore' });
     conversionsDone++;
   } catch (error) {
-      errorArray.push(`Error converting to MP3 in ${albumDir}: ${error}`);
+      errorArray.push(`Error converting ${file.name} to MP3: ${error}`);
   }
 }
 
@@ -405,13 +438,19 @@ async function callLyricsAPI(metadata) {
 
 
 
-//
-//
-//DEPENDENCY CHECKING BELOW
-//
-// ----------------------------------------------------------------------------
-// Description:
-// ----------------------------------------------------------------------------
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////
+//                                                                           //
+//                                                                           //
+//                                                                           //
+//  DEPENDENCY CHECKING LOGIC                                                //
+//                                                                           //
+//                                                                           //
+//                                                                           //
+///////////////////////////////////////////////////////////////////////////////
 function checkDeps(argv) {
   let allOK = true;
 
