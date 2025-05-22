@@ -14,7 +14,7 @@
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, spawnSync } = require('child_process');
 
 const colors = {
   reset: "\x1b[0m",
@@ -353,21 +353,25 @@ function findCoverImage(albumDir) {
 
 
 // ----------------------------------------------------------------------------
-// Description: Get lyrics for all songs in the album directory
+// Description: Get lyrics for current file
 // ----------------------------------------------------------------------------
 async function fetchLyrics(file) {
   const fullPath = path.join(file.parentPath, file.name);
   const metadata = {};
-  const ffprobe = `ffprobe -v quiet -show_entries `
-                + `format_tags=artist,album,title,track `
-                + `-of default=noprint_wrappers=1 "${fullPath}"`;
-  const output = execSync(ffprobe, { encoding: 'utf8' });
+  const ffprobeArgs = [
+    '-v', 'quiet', '-show_entries', 'format_tags=artist,album,title,track',
+    '-of', 'default=noprint_wrappers=1', fullPath
+  ];
+  const result = spawnSync('ffprobe', ffprobeArgs, { encoding: 'utf8' });
+  if (result.status !== 0) {
+    errorArray.push(`Error getting metadata for ${fullPath}: ${result.stderr}`);
+    return;
+  }
   //Example output:
   //TAG:ARTIST=Bastille
   //TAG:ALBUM=&
   //TAG:TITLE=Intros & Narrators
-
-  output.split('\n').forEach(line => {
+  result.stdout.split('\n').forEach(line => {
     const trimmedLine = line.slice(4); //trim 'TAG:'
     const seperatorIndex = trimmedLine.indexOf('=');
 
