@@ -59,9 +59,11 @@ process.argv.forEach(argument => {
   }
 });
 
-// Try loading minimist to figure out which dependencies are actually required
+console.log(fs.readFileSync(__dirname + '/asciiart.txt', 'utf8'));
 console.log('Welcome to the tracktory!');
 console.log('Booting up machines...');
+
+// Try loading minimist to figure out which dependencies are actually required
 let argv;
 try {
   argv = require('minimist')(process.argv.slice(2), {
