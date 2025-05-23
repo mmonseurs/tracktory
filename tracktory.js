@@ -254,17 +254,20 @@ async function convertToMp3(file) {
   const strippedFileName = path.parse(file.name).name;
   const mp3File = `${file.parentPath}/${strippedFileName}.mp3`;
   if (fs.existsSync(mp3File)) {
-    infoArray.push(`${mp3File} already existst. Skipping.`);
+    infoArray.push(`${mp3File} already exists. Skipping.`);
     return;
   }
-  const ffmpegOptions = '-ab 320k -map_metadata 0 -id3v2_version 3';
-  const ffmpegCmd = `ffmpeg -i "${fullFilePath}" ${ffmpegOptions} "${mp3File}"`;
-  try {
-    execSync(ffmpegCmd, { stdio: 'ignore' });
-    conversionsDone++;
-  } catch (error) {
-      errorArray.push(`Error converting ${file.name} to MP3: ${error}`);
+
+  const ffmpegArgs = [
+    '-i', fullFilePath, '-ab', '320k', '-map_metadata',
+    '0', '-id3v2_version' ,'3', mp3File
+  ];
+  const result = spawnSync('ffmpeg', ffmpegArgs, { encoding: 'utf8' });
+  if (result.status !== 0) {
+    errorArray.push(`Error converting ${fullFilePath} to MP3: ${result.stderr}`);
+    return;
   }
+  conversionsDone++;
 }
 
 
