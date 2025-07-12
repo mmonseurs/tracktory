@@ -72,6 +72,7 @@ npm install sharp minimist axios
   - [ffmpeg](https://ffmpeg.org/download.html) — converts audiofiles and reads metadata (filetype-agnostic)
   - [eyeD3](https://eyed3.readthedocs.io/en/latest/installation.html) — reads and writes MP3 metadata in id3v2 spec (optional)
   - [flac](https://xiph.org/flac/download.html) - provides metaflac which reads and writes flac metadata (optional)
+  - [lrcput](https://github.com/JustOptimize/lrcput) - embeds lyric files (optional)
 
 ## Inspirations and similar projects
   - [FLAC-Lyrics-Finder](https://github.com/SjoerdHekking/FLAC-Lyrics-Finder) was very useful to me and works great. Since I was looking for my first app/tool to create and I already had some private shell scripts to handle converting and embedding covers, I choose to roll it all into one tool.
