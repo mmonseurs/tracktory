@@ -10,7 +10,7 @@ When a cover image is provided, Tracktory will embed this in the audio files in 
   - Name: cover, coverart, albumcover
   - Extension: jpg, jpeg, png, webp, bmp
 ### Lyrics
-Tracktory will call the lrclib API to fetch lyrics based on artist, trackname and album. The lyrics will be saved in a sidecar file with the same name as the file it belongs to, and an .lrc extension. Note: some applications can only read embedded lyrics (e.g. Navidrome). For this purpose I'd recommend [lrcput](https://github.com/JustOptimize/lrcput). Since I wanted to avoid a Python dependency and the project appears to be archived/unmaintained I choose not to incorporate this. If you know of an alternative I'd be very eager to hear about it!
+Tracktory will call the lrclib API to fetch lyrics based on artist, trackname and album. The lyrics will be saved in a sidecar file with the same name as the file it belongs to, and an .lrc extension. Note: some applications can only read embedded lyrics (e.g. Navidrome). For this purpose I've added support for [lrcput](https://github.com/JustOptimize/lrcput). However, this project appears to be archived/unmaintained so use at your own risk. If you know of an alternative I'd be very eager to hear about it!
 
 ## Installation
 Download or clone this repository. 
@@ -28,6 +28,8 @@ Options:
 --coverart         Embed cover art into audio files
 --resize           Resize cover to a 500x500 version before embedding (keeps original cover file)
 --lyrics           Attempt to fetch lyrics from lrclib and save as sidecar files
+--embed            Embed lyrics using lrcput
+--lrcput=<path>    Path to lrcput. Default is current directory.
 --preferlocal      Prefer local/existing lyrics over online sources
 --help, -h         Show this help message and exit
 ```
@@ -40,6 +42,10 @@ Processes MP3 files in the current directory, embeds cover art and lyrics.
 node tracktory.js --dir=./albums --filetype=flac --coverart
 ```
 Embeds coverart into FLAC files from './albums' only.
+```
+node tracktory.js --dir="/media/music/Michael Marcagi/Midwest Kid" --filetype=mp3 --lyrics --embed --lrcput="~/Development/lrcput"
+```
+Finds lyrics from Midwest Kid containing mp3 files, and embeds them using lrcput.
 
 Notes:
   - You must have required dependencies installed.
@@ -66,7 +72,8 @@ npm install sharp minimist axios
   - [ffmpeg](https://ffmpeg.org/download.html) — converts audiofiles and reads metadata (filetype-agnostic)
   - [eyeD3](https://eyed3.readthedocs.io/en/latest/installation.html) — reads and writes MP3 metadata in id3v2 spec (optional)
   - [flac](https://xiph.org/flac/download.html) - provides metaflac which reads and writes flac metadata (optional)
+  - [lrcput](https://github.com/JustOptimize/lrcput) - embeds lyric files (optional)
 
 ## Inspirations and similar projects
   - [FLAC-Lyrics-Finder](https://github.com/SjoerdHekking/FLAC-Lyrics-Finder) was very useful to me and works great. Since I was looking for my first app/tool to create and I already had some private shell scripts to handle converting and embedding covers, I choose to roll it all into one tool.
-  - Rhythmbox, fre:ac, Picard (and probably a bunch of others) are powerful GUI applications that can do the same things if you prefer that. However they're obviously more heavyweight and not as streamlined from the CLI, while this tool does it all and is just a single command.
+  - Rhythmbox, fre:ac, Picard (and probably a bunch of others) are powerful GUI applications that can do the same things if you prefer that. However they're obviously more heavyweight and not as streamlined from the CLI, while this tool does it all and is just a single command (especially valuable if you're hosting your library on your own server/homelab like me).
