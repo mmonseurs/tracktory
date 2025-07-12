@@ -10,7 +10,7 @@ When a cover image is provided, Tracktory will embed this in the audio files in 
   - Name: cover, coverart, albumcover
   - Extension: jpg, jpeg, png, webp, bmp
 ### Lyrics
-Tracktory will call the lrclib API to fetch lyrics based on artist, trackname and album. The lyrics will be saved in a sidecar file with the same name as the file it belongs to, and an .lrc extension. Note: some applications can only read embedded lyrics (e.g. Navidrome). For this purpose I'd recommend [lrcput](https://github.com/JustOptimize/lrcput). Since I wanted to avoid a Python dependency and the project appears to be archived/unmaintained I choose not to incorporate this. If you know of an alternative I'd be very eager to hear about it!
+Tracktory will call the lrclib API to fetch lyrics based on artist, trackname and album. The lyrics will be saved in a sidecar file with the same name as the file it belongs to, and an .lrc extension. Note: some applications can only read embedded lyrics (e.g. Navidrome). For this purpose I've added support for [lrcput](https://github.com/JustOptimize/lrcput). However, this project appears to be archived/unmaintained so use at your own risk. If you know of an alternative I'd be very eager to hear about it!
 
 ## Installation
 Download or clone this repository. 
