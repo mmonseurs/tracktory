@@ -40,6 +40,10 @@ Processes MP3 files in the current directory, embeds cover art and lyrics.
 node tracktory.js --dir=./albums --filetype=flac --coverart
 ```
 Embeds coverart into FLAC files from './albums' only.
+```
+node tracktory.js --dir="/media/music/Michael Marcagi/Midwest Kid" --filetype=mp3 --lyrics --embed --lrcput="~/Development/lrcput"
+```
+Finds lyrics from Midwest Kid containing mp3 files, and embeds them using lrcput.
 
 Notes:
   - You must have required dependencies installed.
