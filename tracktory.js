@@ -69,20 +69,23 @@ try {
   argv = require('minimist')(process.argv.slice(2), {
     string:  [
       'dir', 
-      'filetype'
+      'filetype',
+      'lrcput'
     ],
     boolean: [
       'coverart', 'resize',
-      'lyrics',
+      'lyrics', 'embed',
       'preferlocal',
       'convert'
     ],
     default: {
       'dir': '.',
+      'lrcput': './',
       'filetype': 'flac',
       'coverart': false,
       'resize': false,
       'lyrics': false,
+      'embed': false,
       'preferlocal': false
     }
   });
@@ -154,19 +157,34 @@ async function main() {
   }
 
   logStatus();
-  if (argv.convert || argv.lyrics) for (const file of fileArray) {
-    if (argv.convert) {
-      await convertToMp3(file);
+  // if (argv.convert || argv.lyrics) for (const file of fileArray) {
+  //   if (argv.convert) {
+  //     await convertToMp3(file);
+  //     logStatus();
+  //   }
+  //   if (argv.lyrics) {
+  //     await fetchLyrics(file);
+  //     logStatus();
+  //   }
+  // }
+  // if (argv.coverart) for (const album of albumArray) {
+  //   await embedCover(album);
+  //   logStatus();
+  // }
+
+  if (argv.convert) for (const file of fileArray) {
+    await convertToMp3(file);
+    logStatus();
+  }
+  if (argv.lyrics || argv.coverart) for (const album of albumArray) {
+    if (argv.coverart) {
+      await embedCover(album);
       logStatus();
     }
     if (argv.lyrics) {
-      await fetchLyrics(file);
+      await fetchLyricsForAlbum(album);
       logStatus();
     }
-  }
-  if (argv.coverart) for (const album of albumArray) {
-    await embedCover(album);
-    logStatus();
   }
 
   if (fileArray.length === 0 ) {
@@ -356,6 +374,31 @@ function findCoverImage(albumDir) {
 
 
 // ----------------------------------------------------------------------------
+// Description: Get the lyrics for a specific album and optionally embed them
+// ----------------------------------------------------------------------------
+async function fetchLyricsForAlbum(albumDir) {
+  const dirents = await fs.promises.readdir(albumDir, { withFileTypes: true });
+  const files = dirents.filter(dirent => dirent.isFile());
+  const audioFiles = files.filter(file => isAudioFile(file));
+
+  const getAllLyrics = audioFiles.map(file =>
+    fetchLyrics(file)
+  );
+  await Promise.all(getAllLyrics);
+
+  if (argv.embed) try {
+    console.log('embedding lyrics...')
+    if (argv.lrcput.substr(-1) !== '/') argv.lrcput += '/';
+    await execSync(`python ${argv.lrcput}lrcput.py -r -d "${albumDir}"`, { stdio: 'ignore' });
+  } catch (error) {
+    console.log('woops')
+    errorArray.push(`Error embedding lyrics in ${albumDir}: ${error}`);
+  }
+}
+
+
+
+// ----------------------------------------------------------------------------
 // Description: Get lyrics for current file
 // ----------------------------------------------------------------------------
 async function fetchLyrics(file) {
@@ -402,12 +445,14 @@ async function fetchLyrics(file) {
     if (response.instrumental) {
       infoArray.push(`${metadata.artist} - ${metadata.title} is instrumental.`)
       lyricsFound++;
+      logStatus();
       return; //next file
     }
     const lyrics = response.syncedLyrics || response.plainLyrics;
     if (lyrics) {
       foundIt = true;
       lyricsFound++;
+      logStatus();
       if (argv.preferlocal) {
         infoArray.push(`${metadata.artist} - ${metadata.title} already has lyrics.`)
         return;

@@ -2,7 +2,7 @@ flactory (https://github.com/mmonseurs/flactory)
 ------------------------------------------------
 
 Usage:
-  node flactory.js [options]
+  node tracktory.js [options]
 
 Options:
   --dir=<path>             Directory containing audio files (default: current directory)
@@ -11,6 +11,8 @@ Options:
   --coverart               Embed cover art into audio files
   --resize                 Resize cover to a 500x500 version before embedding (keeps original cover file)
   --lyrics                 Attempt to fetch lyrics from lrclib and save as sidecar files
+  --embed                  Embed lyrics using lrcput
+  --lrcput=<path>          Path to lrcput. Default is current directory.
   --preferlocal            Prefer local/existing lyrics over online sources
   --help, -h               Show this help message and exit
 
