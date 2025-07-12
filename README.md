@@ -76,4 +76,4 @@ npm install sharp minimist axios
 
 ## Inspirations and similar projects
   - [FLAC-Lyrics-Finder](https://github.com/SjoerdHekking/FLAC-Lyrics-Finder) was very useful to me and works great. Since I was looking for my first app/tool to create and I already had some private shell scripts to handle converting and embedding covers, I choose to roll it all into one tool.
-  - Rhythmbox, fre:ac, Picard (and probably a bunch of others) are powerful GUI applications that can do the same things if you prefer that. However they're obviously more heavyweight and not as streamlined from the CLI, while this tool does it all and is just a single command.
+  - Rhythmbox, fre:ac, Picard (and probably a bunch of others) are powerful GUI applications that can do the same things if you prefer that. However they're obviously more heavyweight and not as streamlined from the CLI, while this tool does it all and is just a single command (especially valuable if you're hosting your library on your own server/homelab like me).
